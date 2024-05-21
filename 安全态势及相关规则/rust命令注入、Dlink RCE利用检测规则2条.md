@@ -3,7 +3,7 @@
 - [CVE-2024-3273利用检测规则一则](#cve-2024-3273%E5%88%A9%E7%94%A8%E6%A3%80%E6%B5%8B%E8%A7%84%E5%88%99%E4%B8%80%E5%88%99)
 
 
-## CVE-2024-24576利用检测方式一则
+## CVE-2024-24576利用
 
 任意rust、Python、PHP、node.js进程触发CreateProcess、 CreateProcessA 或 CreateProcessW时命令行参数符合如下格式
 
@@ -16,7 +16,7 @@ reference:
 [CVE-2024-24576 Windows 下多语言命令注入漏洞分析 | 程序人生](https://programlife.net/2024/04/14/cve-2024-24576-rust-command-injection-vulnerability/)
 
 
-## CVE-2024-3273利用检测规则一则
+## CVE-2024-3273利用
 
 
 ```
