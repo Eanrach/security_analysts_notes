@@ -1,12 +1,5 @@
 # 安全分析笔记
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 <!-- AUTO-GENERATED-START -->
 ### AI Agent设计
 - [AI Agent常见节点及组合.md](AI%20Agent设计/AI%20Agent常见节点及组合.md)
@@ -23,7 +16,3 @@
 - [DinodasRAT监测场景及处置建议一则.md](安全态势及相关规则/DinodasRAT监测场景及处置建议一则.md)
 - [rust命令注入、Dlink RCE利用检测规则2条.md](安全态势及相关规则/rust命令注入、Dlink%20RCE利用检测规则2条.md)
 <!-- AUTO-GENERATED-END -->
-
-[安全分析思路](https://github.com/Eanrach/security_analysts_notes/tree/main/%E5%AE%89%E5%85%A8%E5%88%86%E6%9E%90%E6%80%9D%E8%B7%AF)
-
-[安全态势及相关规则](https://github.com/Eanrach/security_analysts_notes/tree/main/%E5%AE%89%E5%85%A8%E6%80%81%E5%8A%BF%E5%8F%8A%E7%9B%B8%E5%85%B3%E8%A7%84%E5%88%99)
