@@ -8,9 +8,9 @@
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 <!-- AUTO-GENERATED-START -->
-### AI Agent设计
-- [AI Agent常见节点及组合.md](AI Agent设计/AI Agent常见节点及组合.md)
-- [AI Agent架构选型.md](AI Agent设计/AI Agent架构选型.md)
+### AI_Agent设计
+- [AI_Agent常见节点及组合.md](AI_Agent设计/AI_Agent常见节点及组合.md)
+- [AI_Agent架构选型.md](AI_Agent设计/AI_Agent架构选型.md)
 
 ### INDEX.md
 - [INDEX.md](INDEX.md)
