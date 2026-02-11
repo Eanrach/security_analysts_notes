@@ -1,0 +1,34 @@
+name: Auto Update README TOC
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'security_analysts_notes/**'  # 仅当知识库文件变动时触发
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  update-toc:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      
+      - name: Generate TOC
+        uses: technote-space/toc-generator@v4
+        with:
+          TOC_TITLE: '## 📚 知识库目录'
+          MAX_HEADER_LEVEL: 3
+          TARGET_PATHS: 'README.md'
+          # 可选：排除某些标题
+          # EXCLUDE_HEADERS: 'License,Contributing'
+      
+      - name: Commit & Push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'docs: auto-update README TOC'
+          file_pattern: 'README.md'
+          branch: ${{ github.ref_name }}
