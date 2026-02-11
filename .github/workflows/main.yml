@@ -28,21 +28,17 @@ jobs:
               for (i = 1; i <= length(str); i++) {
                 c = substr(str, i, 1)
 
-                # RFC 3986 unreserved characters
                 if (c ~ /[A-Za-z0-9._~-]/) {
                   out = out c
                 } else {
-                  out = out "%" sprintf("%02X", ord(c))
+                  out = out "%" sprintf("%02X", ord_byte(c))
                 }
               }
               return out
             }
 
-            function ord(c) {
-              return index("\
-\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\
-\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037\
- !\"#$%&'\''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", c) - 1
+            function ord_byte(c) {
+              return and(255, ord = sprintf("%d", c))
             }
 
             {
