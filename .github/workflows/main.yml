@@ -1,15 +1,75 @@
-name: TOC Generator
+name: Auto update README index
 
 on:
   push:
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 jobs:
-  generateTOC:
+  update-readme:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+
     steps:
-      - uses: technote-space/toc-generator@v4
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TOC_TITLE: '## 📚 知识库目录'
+      - uses: actions/checkout@v5
+
+      - name: Generate grouped notes index
+        run: |
+          find . -type f -name "*.md" \
+            ! -path "./README.md" \
+            ! -path "./.github/*" \
+            | sort \
+            | awk '
+            {
+              path = substr($0, 3)   # remove "./"
+              n = split(path, parts, "/")
+              group = parts[1]
+
+              if (!(group in seen)) {
+                if (NR > 1) print ""
+                print "### " group
+                seen[group] = 1
+              }
+
+              indent = ""
+              for (i = 2; i < n; i++) indent = indent "  "
+
+              file = parts[n]
+              print indent "- [" file "](" path ")"
+            }' > INDEX.md
+
+          awk '
+          BEGIN { in_block=0 }
+          /<!-- AUTO-GENERATED-START -->/ {
+            print
+            while ((getline line < "INDEX.md") > 0) print line
+            close("INDEX.md")
+            in_block=1
+            next
+          }
+          /<!-- AUTO-GENERATED-END -->/ {
+            in_block=0
+            print
+            next
+          }
+          !in_block { print }
+          ' README.md > README.new.md
+
+          mv README.new.md README.md
+          rm INDEX.md
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet; then
+            echo "README unchanged"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add README.md
+          git commit -m "docs: auto update notes index (grouped)"
+          git push
