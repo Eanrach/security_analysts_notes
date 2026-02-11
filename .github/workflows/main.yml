@@ -19,11 +19,12 @@ jobs:
         run: |
           find . -type f -name "*.md" \
             ! -path "./README.md" \
+            ! -path "./INDEX.md" \
             ! -path "./.github/*" \
             | sort \
             | awk '
             {
-              path = substr($0, 3)   # remove "./"
+              path = substr($0, 3)
               n = split(path, parts, "/")
               group = parts[1]
 
@@ -39,26 +40,6 @@ jobs:
               file = parts[n]
               print indent "- [" file "](" path ")"
             }' > INDEX.md
-
-          awk '
-          BEGIN { in_block=0 }
-          /<!-- AUTO-GENERATED-START -->/ {
-            print
-            while ((getline line < "INDEX.md") > 0) print line
-            close("INDEX.md")
-            in_block=1
-            next
-          }
-          /<!-- AUTO-GENERATED-END -->/ {
-            in_block=0
-            print
-            next
-          }
-          !in_block { print }
-          ' README.md > README.new.md
-
-          mv README.new.md README.md
-          rm INDEX.md
 
       - name: Commit and push if changed
         run: |
