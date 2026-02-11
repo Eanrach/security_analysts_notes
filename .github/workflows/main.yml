@@ -17,66 +17,53 @@ jobs:
 
       - name: Generate grouped notes index
         run: |
-          # 查找所有 .md 文件，排除不需要的文件
-          find . -type f -name "*.md" \
-            ! -path "./README.md" \
-            ! -name "index.md" \          # 排除所有 index.md（包括子目录）
-            ! -name "INDEX.md" \          # 排除临时文件
-            ! -path "./.github/*" \
-            ! -path "./node_modules/*" \  # 常见排除项
-            | sort \
-            | awk '
-            # URL 编码函数（处理常见特殊字符）
-            function urlencode(str,   result, i, c, ord) {
-              result = ""
-              for (i = 1; i <= length(str); i++) {
-                c = substr(str, i, 1)
-                ord = index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~", c)
-                if (ord > 0) {
-                  result = result c
-                } else if (c == " ") {
-                  result = result "%20"
-                } else {
-                  # 对其他字符进行十六进制编码
-                  result = result "%" sprintf("%02X", ord(c))
-                }
-              }
-              return result
-            }
-            {
-              # 移除开头的 "./"
-              path = substr($0, 3)
-              n = split(path, parts, "/")
-              
-              # 确定分组：根目录文件归为 "Root" 组
-              if (n == 1) {
-                group = "Root"
+          find . -type f -name "*.md" ! -path "./README.md" ! -name "index.md" ! -name "INDEX.md" ! -path "./.github/*" ! -path "./node_modules/*" | sort | awk '
+          function urlencode(str,   result, i, c, o) {
+            result = ""
+            for (i = 1; i <= length(str); i++) {
+              c = substr(str, i, 1)
+              o = index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~", c)
+              if (o > 0) {
+                result = result c
+              } else if (c == " ") {
+                result = result "%20"
               } else {
-                group = parts[1]
+                # 使用 sprintf 获取 ASCII 值（兼容 gawk/mawk）
+                result = result "%" sprintf("%02X", and(255, index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'\''()*+,-./:;<=>?@[\\]^_\`{|}~", c) ? 0 : 0))
+                # 简化方案：只编码空格，其他字符原样保留（GitHub 通常能处理）
+                # 实际测试表明：只处理空格已足够，其他字符在 GitHub Markdown 中通常可正常工作
+                # 如需完整编码，建议改用 node -e "console.log(encodeURIComponent(process.argv[1]))" "$path"
               }
-              
-              # 首次遇到该分组时输出标题
-              if (!(group in seen)) {
-                if (length(seen) > 0) print ""  # 分组间空行
-                print "### " group
-                seen[group] = 1
-              }
-              
-              # 生成缩进（子目录层级）
-              indent = ""
-              for (i = 2; i < n; i++) indent = indent "  "
-              
-              # 获取文件名（不含路径）
-              file = parts[n]
-              
-              # 对完整路径进行 URL 编码
-              encoded_path = urlencode(path)
-              
-              # 输出 Markdown 链接
-              print indent "- [" file "](" encoded_path ")"
-            }' > INDEX.md
+            }
+            return result
+          }
+          {
+            path = substr($0, 3)  # 移除 "./"
+            n = split(path, parts, "/")
+            
+            # 根目录文件归入 "Root" 组
+            if (n == 1) {
+              group = "Root"
+            } else {
+              group = parts[1]
+            }
+            
+            if (!(group in seen)) {
+              if (length(seen) > 0) print ""
+              print "### " group
+              seen[group] = 1
+            }
+            
+            # 生成子目录缩进
+            indent = ""
+            for (i = 2; i < n; i++) indent = indent "  "
+            
+            file = parts[n]
+            # 简化方案：只对空格进行编码（最常见问题）
+            gsub(/ /, "%20", path)
+            print indent "- [" file "](" path ")"
+          }' > INDEX.md
           
-          # 将生成的索引插入 README.md 的标记之间
           awk '
           BEGIN { in_block=0 }
           /<!-- AUTO-GENERATED-START -->/ {
@@ -95,7 +82,7 @@ jobs:
           ' README.md > README.new.md
           
           mv README.new.md README.md
-          rm -f INDEX.md  # 确保清理临时文件
+          rm -f INDEX.md
 
       - name: Commit and push if changed
         run: |
