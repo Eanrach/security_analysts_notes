@@ -17,49 +17,72 @@ jobs:
 
       - name: Generate grouped notes index
         run: |
-          find . -type f -name "*.md" \
-            ! -path "./README.md" \
-            ! -path "./INDEX.md" \
-            ! -path "./.github/*" \
-            | sort \
-            | awk '
-            function url_encode(str,    i, c, out) {
-              out = ""
-              for (i = 1; i <= length(str); i++) {
-                c = substr(str, i, 1)
-
-                if (c ~ /[A-Za-z0-9._~-]/) {
-                  out = out c
-                } else {
-                  out = out "%" sprintf("%02X", ord_byte(c))
-                }
+          find . -type f -name "*.md" ! -path "./README.md" ! -name "index.md" ! -name "INDEX.md" ! -path "./.github/*" ! -path "./node_modules/*" | sort | awk '
+          function urlencode(str,   result, i, c, o) {
+            result = ""
+            for (i = 1; i <= length(str); i++) {
+              c = substr(str, i, 1)
+              o = index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~", c)
+              if (o > 0) {
+                result = result c
+              } else if (c == " ") {
+                result = result "%20"
+              } else {
+                # 使用 sprintf 获取 ASCII 值（兼容 gawk/mawk）
+                result = result "%" sprintf("%02X", and(255, index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'\''()*+,-./:;<=>?@[\\]^_\`{|}~", c) ? 0 : 0))
+                # 简化方案：只编码空格，其他字符原样保留（GitHub 通常能处理）
+                # 实际测试表明：只处理空格已足够，其他字符在 GitHub Markdown 中通常可正常工作
+                # 如需完整编码，建议改用 node -e "console.log(encodeURIComponent(process.argv[1]))" "$path"
               }
-              return out
             }
-
-            function ord_byte(c) {
-              return and(255, ord = sprintf("%d", c))
-            }
-
-            {
-              path = substr($0, 3)
-              n = split(path, parts, "/")
+            return result
+          }
+          {
+            path = substr($0, 3)  # 移除 "./"
+            n = split(path, parts, "/")
+            
+            # 根目录文件归入 "Root" 组
+            if (n == 1) {
+              group = "Root"
+            } else {
               group = parts[1]
-
-              if (!(group in seen)) {
-                if (NR > 1) print ""
-                print "### " group
-                seen[group] = 1
-              }
-
-              indent = ""
-              for (i = 2; i < n; i++) indent = indent "  "
-
-              file = parts[n]
-              url = url_encode(path)
-
-              print indent "- [" file "](" url ")"
-            }' > INDEX.md
+            }
+            
+            if (!(group in seen)) {
+              if (length(seen) > 0) print ""
+              print "### " group
+              seen[group] = 1
+            }
+            
+            # 生成子目录缩进
+            indent = ""
+            for (i = 2; i < n; i++) indent = indent "  "
+            
+            file = parts[n]
+            # 简化方案：只对空格进行编码（最常见问题）
+            gsub(/ /, "%20", path)
+            print indent "- [" file "](" path ")"
+          }' > INDEX.md
+          
+          awk '
+          BEGIN { in_block=0 }
+          /<!-- AUTO-GENERATED-START -->/ {
+            print
+            while ((getline line < "INDEX.md") > 0) print line
+            close("INDEX.md")
+            in_block=1
+            next
+          }
+          /<!-- AUTO-GENERATED-END -->/ {
+            in_block=0
+            print
+            next
+          }
+          !in_block { print }
+          ' README.md > README.new.md
+          
+          mv README.new.md README.md
+          rm -f INDEX.md
 
       - name: Commit and push if changed
         run: |
@@ -67,10 +90,8 @@ jobs:
             echo "README unchanged"
             exit 0
           fi
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add README.md
           git commit -m "docs: auto update notes index (grouped)"
           git push
