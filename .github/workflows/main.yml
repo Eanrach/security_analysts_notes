@@ -23,6 +23,28 @@ jobs:
             ! -path "./.github/*" \
             | sort \
             | awk '
+            function url_encode(str,    i, c, out) {
+              out = ""
+              for (i = 1; i <= length(str); i++) {
+                c = substr(str, i, 1)
+
+                # RFC 3986 unreserved characters
+                if (c ~ /[A-Za-z0-9._~-]/) {
+                  out = out c
+                } else {
+                  out = out "%" sprintf("%02X", ord(c))
+                }
+              }
+              return out
+            }
+
+            function ord(c) {
+              return index("\
+\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\
+\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037\
+ !\"#$%&'\''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", c) - 1
+            }
+
             {
               path = substr($0, 3)
               n = split(path, parts, "/")
@@ -38,7 +60,9 @@ jobs:
               for (i = 2; i < n; i++) indent = indent "  "
 
               file = parts[n]
-              print indent "- [" file "](" path ")"
+              url = url_encode(path)
+
+              print indent "- [" file "](" url ")"
             }' > INDEX.md
 
       - name: Commit and push if changed
