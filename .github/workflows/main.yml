@@ -17,49 +17,85 @@ jobs:
 
       - name: Generate grouped notes index
         run: |
+          # 查找所有 .md 文件，排除不需要的文件
           find . -type f -name "*.md" \
             ! -path "./README.md" \
-            ! -path "./INDEX.md" \
+            ! -name "index.md" \          # 排除所有 index.md（包括子目录）
+            ! -name "INDEX.md" \          # 排除临时文件
             ! -path "./.github/*" \
+            ! -path "./node_modules/*" \  # 常见排除项
             | sort \
             | awk '
-            function url_encode(str,    i, c, out) {
-              out = ""
+            # URL 编码函数（处理常见特殊字符）
+            function urlencode(str,   result, i, c, ord) {
+              result = ""
               for (i = 1; i <= length(str); i++) {
                 c = substr(str, i, 1)
-
-                if (c ~ /[A-Za-z0-9._~-]/) {
-                  out = out c
+                ord = index("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~", c)
+                if (ord > 0) {
+                  result = result c
+                } else if (c == " ") {
+                  result = result "%20"
                 } else {
-                  out = out "%" sprintf("%02X", ord_byte(c))
+                  # 对其他字符进行十六进制编码
+                  result = result "%" sprintf("%02X", ord(c))
                 }
               }
-              return out
+              return result
             }
-
-            function ord_byte(c) {
-              return and(255, ord = sprintf("%d", c))
-            }
-
             {
+              # 移除开头的 "./"
               path = substr($0, 3)
               n = split(path, parts, "/")
-              group = parts[1]
-
+              
+              # 确定分组：根目录文件归为 "Root" 组
+              if (n == 1) {
+                group = "Root"
+              } else {
+                group = parts[1]
+              }
+              
+              # 首次遇到该分组时输出标题
               if (!(group in seen)) {
-                if (NR > 1) print ""
+                if (length(seen) > 0) print ""  # 分组间空行
                 print "### " group
                 seen[group] = 1
               }
-
+              
+              # 生成缩进（子目录层级）
               indent = ""
               for (i = 2; i < n; i++) indent = indent "  "
-
+              
+              # 获取文件名（不含路径）
               file = parts[n]
-              url = url_encode(path)
-
-              print indent "- [" file "](" url ")"
+              
+              # 对完整路径进行 URL 编码
+              encoded_path = urlencode(path)
+              
+              # 输出 Markdown 链接
+              print indent "- [" file "](" encoded_path ")"
             }' > INDEX.md
+          
+          # 将生成的索引插入 README.md 的标记之间
+          awk '
+          BEGIN { in_block=0 }
+          /<!-- AUTO-GENERATED-START -->/ {
+            print
+            while ((getline line < "INDEX.md") > 0) print line
+            close("INDEX.md")
+            in_block=1
+            next
+          }
+          /<!-- AUTO-GENERATED-END -->/ {
+            in_block=0
+            print
+            next
+          }
+          !in_block { print }
+          ' README.md > README.new.md
+          
+          mv README.new.md README.md
+          rm -f INDEX.md  # 确保清理临时文件
 
       - name: Commit and push if changed
         run: |
@@ -67,10 +103,8 @@ jobs:
             echo "README unchanged"
             exit 0
           fi
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add README.md
           git commit -m "docs: auto update notes index (grouped)"
           git push
